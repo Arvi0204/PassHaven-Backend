@@ -54,6 +54,8 @@ app.get('/', (req, res) => {
 });
 
 // Server listening
-app.listen(port, () => {
-  console.log(`PassHaven backend listening on port ${port}`);
-});
+// app.listen(port, () => {
+//   console.log(`PassHaven backend listening on port ${port}`);
+// });
+
+module.exports = app

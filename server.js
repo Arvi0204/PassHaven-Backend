@@ -11,15 +11,29 @@ const port =  process.env.PORT || 2000;
 const uri = process.env.MONGO_URI;
 const client = new MongoClient(uri);
 
-const connectToDb = async () => {
-  try {
-    await client.connect();
+if (!uri) {
+  console.error("MongoDB URI not found in environment variables");
+  process.exit(1);
+}
 
-    const db = client.db("PassHaven");
-    return db;
+// MongoDB Client
+let db;
+
+// Function to connect to the database (reused across requests)
+const connectToDb = async () => {
+  if (db) {
+      // Reuse existing database connection
+      return db;
+  }
+  try {
+      const client = new MongoClient(uri);
+      await client.connect();
+      db = client.db("PassHaven");
+      console.log("Connected to MongoDB");
+      return db;
   } catch (err) {
-    console.log("Database connection error:", err);
-    throw err;
+      console.error("Database connection error:", err);
+      throw err;
   }
 };
 

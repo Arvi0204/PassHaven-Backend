@@ -26,7 +26,6 @@ const connectToDb = async () => {
       return db;
   }
   try {
-      const client = new MongoClient(uri);
       await client.connect();
       db = client.db("PassHaven");
       console.log("Connected to MongoDB");

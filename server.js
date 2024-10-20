@@ -5,7 +5,7 @@ const cors = require('cors');
 const { MongoClient } = require('mongodb');
 
 const app = express();
-const port = 2000;
+const port =  process.env.PORT || 2000;
 
 // MongoDB Connection
 const uri = process.env.MONGO_URI;
@@ -43,5 +43,3 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
   console.log(`PassHaven backend listening on port ${port}`);
 });
-
-module.exports = server;

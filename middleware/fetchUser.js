@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = 'PassHavenSecureStorage'
+require('dotenv').config()
+const JWT_SECRET = process.env.JWT_SECRET
 const fetchUser = (req, res, next) => {
     // Get user from the JWT token and append and add id to req object
     const token  = req.header('auth-token');

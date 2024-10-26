@@ -91,7 +91,8 @@ router.post('/login', [
         // Compare the provided password with the hashed password stored in the database
         const passwordCompare = await bcrypt.compare(password, user.password);
         if (!passwordCompare) {
-            return res.status(400).json({ success, error: "Please login with valid credentials" });
+            errors.push({ "msg": "Please login with valid credentials" })
+            return res.status(400).json({ success, errors });
         }
 
         //Logic to manitain last login timestamp
@@ -138,14 +139,21 @@ router.post('/changepassword', fetchUser, [
     body('newPassword', 'Password must be at least 8 characters').isLength({ min: 8 })
 ], async (req, res) => {
     let success = false;
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ success, errors: errors.array() });
+    const errors = validationResult(req).array();
+    if (errors.length !== 0) {
+        return res.status(400).json({ success, errors });
     }
     const { newPassword } = req.body;
 
     try {
         const db = await connectToDb();
+        // Compare the provided password with the hashed password stored in the database
+        const user = await db.collection('users').findOne({ _id: new ObjectId(req.user.id) });
+        const passwordCompare = await bcrypt.compare(newPassword, user.password);
+        if (passwordCompare) {
+            errors.push({ "msg": "New master password must be different from old master password" })
+            return res.status(400).json({ success, errors });
+        }
 
         // Generate hash for the new password
         const salt = await bcrypt.genSalt(10);

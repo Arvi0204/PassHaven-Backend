@@ -15,16 +15,16 @@ const connectToDb = require('../server'); // Import the connectToDb function
 
 // ROUTE 1 = Create a User using: POST "/api/auth/createuser". No login required
 router.post('/createuser', [
-    body('username', 'Enter a valid name').isLength({ min: 5 }),
+    body('username', 'Username must contain at least 5 characters').isLength({ min: 5 }),
     body('email', 'Enter a valid email').isEmail(),
-    body('password', 'Password must be at least 5 characters').isLength({ min: 5 })
+    body('password', 'Password must be at least 8 characters').isLength({ min: 8 })
 ], async (req, res) => {
     let success = false;
 
     // If there are validation errors, return error and Bad request
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+    let errors = validationResult(req).array();
+    if (errors.length !== 0) {
+        return res.status(400).json({ errors });
     }
 
     try {
@@ -33,7 +33,8 @@ router.post('/createuser', [
         // Check if user with the same email already exists
         let user = await db.collection('users').findOne({ email: req.body.email });
         if (user) {
-            return res.status(400).json({ success, error: "Sorry, another account exists with this email" });
+            errors.push({ "msg": "Sorry, another account exists with this email!" })
+            return res.status(400).json({ success, errors });
         }
 
         // Generate hash for the password
@@ -44,7 +45,7 @@ router.post('/createuser', [
             username: req.body.username,
             email: req.body.email,
             password: secPass,
-            createdAt: new Date() 
+            createdAt: new Date()
         });
 
         // Create JWT token
@@ -55,8 +56,7 @@ router.post('/createuser', [
         };
         const authToken = jwt.sign(data, JWT_SECRET);
 
-        success = true;
-        res.status(201).json({ success, authToken });
+        res.status(201).json({ success: true, authToken });
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Internal Server Error");
@@ -71,9 +71,9 @@ router.post('/login', [
     let success = false;
 
     // If there are validation errors, return error and Bad request
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+    const errors = validationResult(req).array();
+    if (errors.length !== 0) {
+        return res.status(400).json({ errors });
     }
 
     const { email, password } = req.body;
@@ -84,7 +84,8 @@ router.post('/login', [
         // Find the user by email
         let user = await db.collection('users').findOne({ email });
         if (!user) {
-            return res.status(400).json({ success, error: "User does not exist" });
+            errors.push({ "msg": "User does not exist" })
+            return res.status(400).json({ success, errors });
         }
 
         // Compare the provided password with the hashed password stored in the database
@@ -106,8 +107,7 @@ router.post('/login', [
             }
         };
         const authToken = jwt.sign(payload, JWT_SECRET);
-        success = true;
-        res.json({ success, authToken });
+        res.json({ success: true, authToken });
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Internal Server Error");
@@ -135,11 +135,12 @@ router.post('/getuser', fetchUser, async (req, res) => {
 
 // ROUTE 4 = Change password for user. POST /api/auth/changepassword
 router.post('/changepassword', fetchUser, [
-    body('newPassword', 'New password cannot be blank').exists()
+    body('newPassword', 'Password must be at least 8 characters').isLength({ min: 8 })
 ], async (req, res) => {
+    let success = false;
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({ success, errors: errors.array() });
     }
     const { newPassword } = req.body;
 
@@ -157,7 +158,7 @@ router.post('/changepassword', fetchUser, [
             { returnDocument: 'after' }
         );
 
-        res.status(200).json({ message: 'Password updated successfully' });
+        res.status(200).json({ success: true, message: 'Password updated successfully! Please login with updated credentials' });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server error' });
@@ -174,7 +175,7 @@ router.post('/deleteuser', fetchUser, async (req, res) => {
         await db.collection('passwords').deleteMany({ user: new ObjectId(userId) });
 
         // Delete user
-        await db.collection('users').deleteOne({ _id: new ObjectId(userId) }); 
+        await db.collection('users').deleteOne({ _id: new ObjectId(userId) });
 
         return res.status(200).json({ success: true, message: 'User and associated passwords deleted successfully.' });
     } catch (error) {
